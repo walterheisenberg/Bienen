@@ -100,12 +100,55 @@ Feedback ist immer willkomen. -->
         .date-span {
             margin-right: 5px;
         }
+        .impressum-btn {
+            background: none;
+            color: #007BFF;
+            padding: 0;
+            font-size: 0.7em;
+        }
+
+        .impressum-btn:hover {
+            text-decoration: underline;
+        }
+        .header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap; /* verhindert Umbruch */
+        }
+
+        .version-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap; /* bleibt immer in einer Zeile */
+        }
+
+        /* unauffälliger Link-Style */
+        .impressum-btn {
+            background: none;
+            border: none;
+            color: #007BFF;
+            font-size: 0.7em;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .impressum-btn:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
-    <h1>
-        Kalender Generator Bienen
-        <span class="version" id="versionTag"></span>
+    <h1 class="header">
+        <span>Kalender Generator Bienen</span>
+        <span class="version-group">
+            <span class="version" id="versionTag"></span>
+            <button class="impressum-btn" onclick="window.location.href='info.html'">
+                Info
+            </button>
+        </span>
     </h1>
     <form id="generalForm">
         <label for="prefix">Geben Sie einen Präfix ein:</label>
@@ -135,7 +178,7 @@ Feedback ist immer willkomen. -->
 
     <script>
         // Version
-        const Version = "0.16";
+        const Version = "0.18";
     
         let year;
         let downloadFileName;
@@ -175,6 +218,7 @@ Feedback ist immer willkomen. -->
         // Event Listener, um die Werte nach dem Laden der Seite zu setzen
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('versionTag').textContent = "v" + Version;
+            populateScheduleTypes();
             setTestValues();
         });
 
@@ -208,10 +252,6 @@ Feedback ist immer willkomen. -->
             ]
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            populateScheduleTypes();
-            setTestValues();
-        });
 
         function populateScheduleTypes() {
             const scheduleTypeSelect = document.getElementById('scheduleType');
@@ -226,18 +266,27 @@ Feedback ist immer willkomen. -->
         function populateSteps() {
             const scheduleType = document.getElementById('scheduleType').value;
             const stepsSelect = document.getElementById('steps');
-            stepsSelect.innerHTML = '';
 
-            if (scheduleType) {
-                const options = schedules[scheduleType]
-                    .filter(item => item.selectable)
-                    .map(item => `<option value="${item.offset}">${item.task}</option>`).join('');
-                stepsSelect.innerHTML = options;
-                stepsSelect.disabled = false;
-            } else {
+            stepsSelect.innerHTML = '';
+            stepsSelect.disabled = !scheduleType;
+
+            if (!scheduleType) {
                 stepsSelect.innerHTML = '<option value="">Bitte zuerst einen Typ wählen</option>';
-                stepsSelect.disabled = true;
+                return;
             }
+
+            const fragment = document.createDocumentFragment();
+
+            schedules[scheduleType]
+                .filter(({ selectable }) => selectable)
+                .forEach(({ offset, task }) => {
+                    const option = document.createElement('option');
+                    option.value = offset;
+                    option.textContent = task;
+                    fragment.appendChild(option);
+                });
+
+            stepsSelect.appendChild(fragment);
         }
 
         function generateSchedule() {
@@ -315,7 +364,7 @@ Feedback ist immer willkomen. -->
                     const now = new Date();
                     const dtstamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-                    const uid = `${date}-${index}-${Math.random().toString(36).substr(2, 9)}@bienenkalender`;
+                    const uid = `${date}-${index}-${Math.random().toString(36).slice(2, 11)}@bienenkalender`;
 
                     const emoji = emojiMap[state.scheduleType] || "";
 
