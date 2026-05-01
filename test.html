@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<!--Drehkalender, inspiriert von
+https://www.wienold-imkereibedarf.de/bienenkoeniginnen-zuchtkalender
+
+version 0.0004
+
+ToDo:
+- Drehkalender in anderen Code einbauen
+- Beschreibung verbessern
+- Auswahlbutton für Zucht, TBE, TuB, etc. hinzufügen
+- uvm.
+-->
+
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zuchtkalender</title>
+
+<style>
+body {
+  font-family: Arial;
+  margin: 0;
+  background: #f2f2f2;
+  text-align: center;
+}
+
+header {
+  background: #f0a500;
+  color: white;
+  padding: 15px;
+  font-size: 20px;
+}
+
+.card {
+  background: white;
+  margin: 15px;
+  padding: 15px;
+  border-radius: 12px;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.toggle {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.toggle button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: #ddd;
+}
+
+.toggle .active {
+  background: #f0a500;
+  color: white;
+}
+
+input, button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.result {
+  text-align: left;
+  margin-top: 10px;
+}
+
+/* Anleitung */
+.accordion {
+  background: #eee;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.accordion.active {
+  background: #f0a500;
+  color: white;
+}
+
+.panel {
+  display: none;
+  text-align: left;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/* Drehscheibe */
+.wheel-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  margin: auto;
+}
+
+.pointer {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-bottom: 20px solid red;
+}
+
+canvas {
+  touch-action: none;
+}
+
+.hidden { display:none; }
+</style>
+</head>
+
+<body>
+
+<header>Bienen Zuchtkalender</header>
+
+<div class="card">
+
+  <!-- Anleitung -->
+  <div class="accordion" onclick="toggleHelp()">📖 Bedienungsanleitung anzeigen</div>
+  <div class="panel" id="helpPanel">
+    <p><b>Der Zuchtkalender hilft Ihnen, alle wichtigen Termine in der Königinnenzucht schnell zu bestimmen.</b></p>
+
+    <p><b>1. Startdatum festlegen</b><br>
+    Wählen Sie den Tag des Umlarvens – im Kalender oder über die Drehscheibe.</p>
+
+    <p><b>2. Drehscheibe nutzen</b><br>
+    Drehen Sie die Scheibe mit Finger oder Maus bis das gewünschte Datum oben steht.</p>
+
+    <p><b>3. Termine ablesen</b><br>
+    Die wichtigsten Zeitpunkte werden automatisch berechnet:
+    <ul>
+      <li>Verdeckelung</li>
+      <li>Schlupf</li>
+      <li>Begattung</li>
+      <li>Eiablage</li>
+    </ul>
+    </p>
+
+    <p><i>Hinweis: Alle Angaben sind Richtwerte und können variieren.</i></p>
+  </div>
+
+  <!-- Umschalter -->
+  <div class="toggle">
+    <button id="btnCal" class="active" onclick="switchMode('cal')">📅 Kalender</button>
+    <button id="btnWheel" onclick="switchMode('wheel')">🌀 Drehscheibe</button>
+  </div>
+
+  <!-- Kalender -->
+  <div id="calMode">
+    <input type="date" id="dateInput">
+    <button onclick="calculateFromInput()">Berechnen</button>
+  </div>
+
+  <!-- Drehscheibe -->
+  <div id="wheelMode" class="hidden">
+    <div class="wheel-container">
+      <div class="pointer"></div>
+      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+    </div>
+  </div>
+
+  <div id="dateDisplay"></div>
+  <div id="result" class="result"></div>
+
+</div>
+
+<script>
+const today = new Date();
+const input = document.getElementById("dateInput");
+input.valueAsDate = today;
+
+/* Anleitung */
+function toggleHelp(){
+  const panel = document.getElementById("helpPanel");
+  const acc = document.querySelector(".accordion");
+
+  panel.style.display = panel.style.display === "block" ? "none" : "block";
+  acc.classList.toggle("active");
+}
+
+/* Umschalter */
+function switchMode(mode){
+  calMode.classList.toggle("hidden", mode!=="cal");
+  wheelMode.classList.toggle("hidden", mode!=="wheel");
+
+  btnCal.classList.toggle("active", mode==="cal");
+  btnWheel.classList.toggle("active", mode==="wheel");
+}
+
+/* Berechnung */
+function calculate(date){
+  dateDisplay.innerHTML = "<b>Datum:</b> " + date.toLocaleDateString("de-DE");
+
+  const offsets = [0,5,11,16,21];
+  const names = ["Umlarven","Verdeckelt","Schlupf","Begattung","Eiablage"];
+
+  let html = "<ul>";
+  offsets.forEach((d,i)=>{
+    let nd = new Date(date);
+    nd.setDate(nd.getDate()+d);
+    html += `<li><b>${names[i]}:</b> ${nd.toLocaleDateString("de-DE")}</li>`;
+  });
+  html += "</ul>";
+
+  result.innerHTML = html;
+}
+
+function calculateFromInput(){
+  calculate(new Date(input.value));
+}
+
+/* Drehscheibe */
+const canvas = document.getElementById("wheelCanvas");
+const ctx = canvas.getContext("2d");
+
+const center = 150;
+const radius = 140;
+
+let rotation = (today.getDate() + today.getMonth()*30) * (360/365);
+let dragging = false;
+let lastAngle = 0;
+
+const anglePerDay = 360/365;
+
+function draw(){
+  ctx.clearRect(0,0,300,300);
+
+  for(let i=0;i<12;i++){
+    let angle = (i*30 + rotation)*Math.PI/180;
+    ctx.beginPath();
+    ctx.moveTo(center,center);
+    ctx.arc(center,center,radius,angle,angle+30*Math.PI/180);
+    ctx.fillStyle = i%2 ? "#ffd27f" : "#fff2cc";
+    ctx.fill();
+  }
+}
+
+function getDate(){
+  let day = Math.round(((rotation%360+360)%360)/anglePerDay);
+  let d = new Date(new Date().getFullYear(),0);
+  d.setDate(day+1);
+  return d;
+}
+
+function update(){
+  calculate(getDate());
+}
+
+function getAngle(x,y){
+  return Math.atan2(y-center,x-center)*180/Math.PI;
+}
+
+canvas.addEventListener("mousedown",start);
+canvas.addEventListener("touchstart",start);
+
+function start(e){
+  dragging=true;
+  lastAngle = getAngle(...getPos(e));
+}
+
+window.addEventListener("mousemove",move);
+window.addEventListener("touchmove",move);
+
+function move(e){
+  if(!dragging) return;
+
+  let angle = getAngle(...getPos(e));
+  let diff = (angle - lastAngle) * 0.4; // weniger sensitiv
+
+  rotation += diff;
+
+  rotation = Math.round(rotation/anglePerDay)*anglePerDay;
+
+  lastAngle = angle;
+
+  draw();
+  update();
+}
+
+window.addEventListener("mouseup",()=>dragging=false);
+window.addEventListener("touchend",()=>dragging=false);
+
+function getPos(e){
+  const rect = canvas.getBoundingClientRect();
+  if(e.touches){
+    return [
+      e.touches[0].clientX - rect.left,
+      e.touches[0].clientY - rect.top
+    ];
+  }
+  return [
+    e.clientX - rect.left,
+    e.clientY - rect.top
+  ];
+}
+
+/* Init */
+draw();
+calculate(today);
+</script>
+
+</body>
+</html>
