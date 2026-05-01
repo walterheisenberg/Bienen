@@ -1,0 +1,112 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 10px;
+  padding: 0;
+  line-height: 1.6;
+  background-color: #f5f5f5;
+  width: 97%;
+  font-size: 1.2rem;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.version {
+  font-size: 0.6em;
+  color: #777;
+  margin-left: 8px;
+  font-weight: normal;
+}
+
+form, .zeitplan {
+  max-width: 600px;
+  width: 97%;
+  margin: 20px auto;
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+}
+
+ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+li {
+  background-color: #f0f0f0;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.checkbox {
+  width: 25px;
+  height: 25px;
+  margin-right: 20px;
+}
+
+label {
+  margin-top: 10px;
+  display: block;
+}
+
+input, select, button {
+  width: 100%;
+  margin: 5px 0;
+  padding: 10px;
+  font-size: 1.2rem;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
+
+button {
+  background-color: #007BFF;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.date-span {
+  margin-right: 5px;
+}
+
+.impressum-btn {
+  background: none;
+  color: #007BFF;
+  padding: 0;
+  font-size: 0.7em;
+  border: none;
+  cursor: pointer;
+}
+
+.impressum-btn:hover {
+  text-decoration: underline;
+}
+
+.header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+.version-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
