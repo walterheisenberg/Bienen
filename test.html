@@ -1,312 +1,677 @@
+<!-- Der Code ist unter CC-BY-NC-SA (cc-by-nc-sa-3.0-de) veröffentlicht
+https://creativecommons.org/licenses/by-nc-sa/3.0/de/legalcode
+
+Er wurde zum Teil von ChatGPT und Perplexity.ai erstellt. Die Prompts und Änderungen stammen von
+Ralf Lindlein
+lindlein@gmx.com
+
+Feedback ist immer willkomen. -->
+
 <!DOCTYPE html>
-
-<!--Drehkalender, inspiriert von
-https://www.wienold-imkereibedarf.de/bienenkoeniginnen-zuchtkalender
-
-version 0.0004
-
-ToDo:
-- Drehkalender in anderen Code einbauen
-- Beschreibung verbessern
-- Auswahlbutton für Zucht, TBE, TuB, etc. hinzufügen
-- uvm.
--->
-
 <html lang="de">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zuchtkalender</title>
 
-<style>
-body {
-  font-family: Arial;
-  margin: 0;
-  background: #f2f2f2;
-  text-align: center;
-}
+    <script>
+        // Version
+        const Version = "0.35";
+    </script>
 
-header {
-  background: #f0a500;
-  color: white;
-  padding: 15px;
-  font-size: 20px;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalender Generator Bienen</title>
 
-.card {
-  background: white;
-  margin: 15px;
-  padding: 15px;
-  border-radius: 12px;
-  max-width: 420px;
-  margin-left: auto;
-  margin-right: auto;
-}
+    <!-- Zeitpläne laden -->
+    <script src="schedules.js"></script>
 
-.toggle {
-  display: flex;
-  margin-bottom: 10px;
-}
+    <!-- 🔥 FIX: sicherstellen, dass emojiMap global verfügbar ist -->
+    <script>
+        if (typeof emojiMap !== "undefined") {
+            window.emojiMap = emojiMap;
+        }
+    </script>
 
-.toggle button {
-  flex: 1;
-  padding: 10px;
-  border: none;
-  background: #ddd;
-}
+    <!-- CSS laden -->
+    <link rel="stylesheet" href="style.css">
 
-.toggle .active {
-  background: #f0a500;
-  color: white;
-}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 
-input, button {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-}
+    <style>
+        /* Zusätzliche Styles für Drehscheibe */
+        .toggle {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+        .toggle button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: #ddd;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .toggle .active {
+            background: #f0a500;
+            color: white;
+        }
 
-.result {
-  text-align: left;
-  margin-top: 10px;
-}
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+        }
 
-/* Anleitung */
-.accordion {
-  background: #eee;
-  padding: 10px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-bottom: 10px;
-}
+        .pointer {
+            position: absolute;
+            top: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 12px solid transparent;
+            border-right: 12px solid transparent;
+            border-bottom: 20px solid red;
+            z-index: 10;
+        }
 
-.accordion.active {
-  background: #f0a500;
-  color: white;
-}
+        canvas {
+            touch-action: none;
+            cursor: grab;
+        }
 
-.panel {
-  display: none;
-  text-align: left;
-  margin-top: 10px;
-  font-size: 14px;
-}
+        canvas:active {
+            cursor: grabbing;
+        }
 
-/* Drehscheibe */
-.wheel-container {
-  position: relative;
-  width: 300px;
-  height: 300px;
-  margin: auto;
-}
+        .hidden {
+            display: none !important;
+        }
 
-.pointer {
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 20px solid red;
-}
+        #wheelDateDisplay {
+            margin-top: 15px;
+            font-weight: bold;
+            font-size: 16px;
+        }
 
-canvas {
-  touch-action: none;
-}
+        .wheel-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
 
-.hidden { display:none; }
-</style>
+        .wheel-buttons button {
+            padding: 10px 20px;
+            background: #f0a500;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .wheel-buttons button:hover {
+            background: #d89400;
+        }
+
+        #wheelResult {
+            text-align: left;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+
+        #wheelResult ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #wheelResult li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        #wheelResult li:last-child {
+            border-bottom: none;
+        }
+
+        .date-selection-container {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 
 <body>
+    <h1 class="header">
+        <span>Kalender Generator Bienen</span>
+        <span class="version-group">
+            <span class="version" id="versionTag"></span>
+            <button class="impressum-btn" onclick="window.location.href='info.html'">
+                Info
+            </button>
+        </span>
+    </h1>
 
-<header>Bienen Zuchtkalender</header>
+    <form id="generalForm">
+        <label for="prefix">Benennung des Zeitplans:</label>
+        <input type="text" id="prefix" placeholder="z.B. SBA1, Serie_23 o.ä.">
 
-<div class="card">
+        <label for="scheduleType">Wählen Sie einen Zeitplan:</label>
+        <select id="scheduleType" onchange="populateSteps()">
+            <option value="">Bitte wählen</option>
+        </select>
 
-  <!-- Anleitung -->
-  <div class="accordion" onclick="toggleHelp()">📖 Bedienungsanleitung anzeigen</div>
-  <div class="panel" id="helpPanel">
-    <p><b>Der Zuchtkalender hilft Ihnen, alle wichtigen Termine in der Königinnenzucht schnell zu bestimmen.</b></p>
+        <label for="steps">Wählen Sie einen Arbeitsschritt:</label>
+        <select id="steps" disabled onchange="onStepSelected()">
+            <option value="">Bitte zuerst einen Typ wählen</option>
+        </select>
 
-    <p><b>1. Startdatum festlegen</b><br>
-    Wählen Sie den Tag des Umlarvens – im Kalender oder über die Drehscheibe.</p>
+        <!-- Toggle zwischen Kalender und Drehscheibe -->
+        <div id="dateSelectionToggle" class="date-selection-container hidden">
+            <label>Wählen Sie die Datumseingabe:</label>
+            <div class="toggle">
+                <button type="button" id="btnCalendar" class="active" onclick="switchDateMode('calendar')">📅 Kalender</button>
+                <button type="button" id="btnWheel" onclick="switchDateMode('wheel')">🌀 Drehscheibe</button>
+            </div>
+        </div>
 
-    <p><b>2. Drehscheibe nutzen</b><br>
-    Drehen Sie die Scheibe mit Finger oder Maus bis das gewünschte Datum oben steht.</p>
+        <!-- Kalender Modus -->
+        <div id="calendarMode" class="hidden">
+            <label for="startDate">Wählen Sie das Datum für den Arbeitsschritt:</label>
+            <input type="date" id="startDate" onchange="generateSchedule()">
+        </div>
 
-    <p><b>3. Termine ablesen</b><br>
-    Die wichtigsten Zeitpunkte werden automatisch berechnet:
-    <ul>
-      <li>Verdeckelung</li>
-      <li>Schlupf</li>
-      <li>Begattung</li>
-      <li>Eiablage</li>
-    </ul>
-    </p>
 
-    <p><i>Hinweis: Alle Angaben sind Richtwerte und können variieren.</i></p>
-  </div>
+        <!-- Drehscheiben Modus -->
+        <div id="wheelMode" class="hidden">
+            <div class="wheel-container">
+                <div class="pointer"></div>
+                <canvas id="wheelCanvas" width="300" height="300"></canvas>
+            </div>
 
-  <!-- Umschalter -->
-  <div class="toggle">
-    <button id="btnCal" class="active" onclick="switchMode('cal')">📅 Kalender</button>
-    <button id="btnWheel" onclick="switchMode('wheel')">🌀 Drehscheibe</button>
-  </div>
+            <div id="wheelDateDisplay"></div>
 
-  <!-- Kalender -->
-  <div id="calMode">
-    <input type="date" id="dateInput">
-    <button onclick="calculateFromInput()">Berechnen</button>
-  </div>
+            <div class="wheel-buttons">
+                <button type="button" onclick="adjustDay(-1)">⬅️ -1 Tag</button>
+                <button type="button" onclick="adjustDay(1)">➡️ +1 Tag</button>
+            </div>
+        </div>
 
-  <!-- Drehscheibe -->
-  <div id="wheelMode" class="hidden">
-    <div class="wheel-container">
-      <div class="pointer"></div>
-      <canvas id="wheelCanvas" width="300" height="300"></canvas>
+<!--         <button type="button" id="generateBtn" class="hidden" onclick="generateSchedule()">Zeitplan erstellen</button> -->
+    </form>
+
+    <div id="zeitplan" class="zeitplan" style="display:none;">
+        <h2 id="zeitplanTitle"></h2>
+        <ul id="scheduleList"></ul>
+        <button type="button" onclick="downloadICS()">Als ICS herunterladen</button>
+        <button type="button" onclick="downloadPDF()">Als PDF herunterladen</button>
     </div>
-  </div>
-
-  <div id="dateDisplay"></div>
-  <div id="result" class="result"></div>
-
-</div>
 
 <script>
-const today = new Date();
-const input = document.getElementById("dateInput");
-input.valueAsDate = today;
+    let year;
+    let downloadFileName;
+    let title = '';
+    let scheduleData = [];
 
-/* Anleitung */
-function toggleHelp(){
-  const panel = document.getElementById("helpPanel");
-  const acc = document.querySelector(".accordion");
+    const testTheHtml = false;
 
-  panel.style.display = panel.style.display === "block" ? "none" : "block";
-  acc.classList.toggle("active");
+    function setTestValues() {
+    if (testTheHtml) {
+        document.getElementById('prefix').value = 'TestPrefix';
+        document.getElementById('scheduleType').value = 'TuB';
+        populateSteps();
+        document.getElementById('steps').value = '0';
+        document.getElementById('startDate').value = '2025-06-01';
+
+        // Trigger die Anzeige der Datumsauswahl
+        onStepSelected();
+    }
 }
 
-/* Umschalter */
-function switchMode(mode){
-  calMode.classList.toggle("hidden", mode!=="cal");
-  wheelMode.classList.toggle("hidden", mode!=="wheel");
 
-  btnCal.classList.toggle("active", mode==="cal");
-  btnWheel.classList.toggle("active", mode==="wheel");
+    function getFormState() {
+        return {
+            prefix: document.getElementById('prefix').value.trim(),
+            scheduleType: document.getElementById('scheduleType').value,
+            steps: parseInt(document.getElementById('steps').value),
+            startDate: document.getElementById('startDate').value,
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('versionTag').textContent = "v" + Version;
+    populateScheduleTypes();
+    setTestValues();
+
+    // Drehscheibe initialisieren
+    initWheel();
+
+    // Event-Listener für Datumsänderung (falls nicht inline)
+    // document.getElementById('startDate').addEventListener('change', generateSchedule);
+});
+
+
+    function populateScheduleTypes() {
+        const scheduleTypeSelect = document.getElementById('scheduleType');
+        Object.keys(schedules).forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            scheduleTypeSelect.appendChild(option);
+        });
+    }
+
+    function populateSteps() {
+    const scheduleType = document.getElementById('scheduleType').value;
+    const stepsSelect = document.getElementById('steps');
+
+    stepsSelect.innerHTML = '';
+    stepsSelect.disabled = !scheduleType;
+
+    if (!scheduleType) {
+        stepsSelect.innerHTML = '<option value="">Bitte zuerst einen Typ wählen</option>';
+        // Verstecke Datumsauswahl
+        document.getElementById('dateSelectionToggle').classList.add('hidden');
+        document.getElementById('calendarMode').classList.add('hidden');
+        document.getElementById('wheelMode').classList.add('hidden');
+        return;
+    }
+
+    schedules[scheduleType]
+        .filter(({ selectable }) => selectable)
+        .forEach(({ offset, task }) => {
+            const option = document.createElement('option');
+            option.value = offset;
+            option.textContent = task;
+            stepsSelect.appendChild(option);
+        });
+
+    // Automatisch den ersten Schritt auswählen und Datumsauswahl anzeigen
+    if (stepsSelect.options.length > 0) {
+        stepsSelect.selectedIndex = 0;
+        onStepSelected();
+    }
 }
 
-/* Berechnung */
-function calculate(date){
-  dateDisplay.innerHTML = "<b>Datum:</b> " + date.toLocaleDateString("de-DE");
 
-  const offsets = [0,5,11,16,21];
-  const names = ["Umlarven","Verdeckelt","Schlupf","Begattung","Eiablage"];
+    function onStepSelected() {
+    const stepsSelect = document.getElementById('steps');
 
-  let html = "<ul>";
-  offsets.forEach((d,i)=>{
-    let nd = new Date(date);
-    nd.setDate(nd.getDate()+d);
-    html += `<li><b>${names[i]}:</b> ${nd.toLocaleDateString("de-DE")}</li>`;
-  });
-  html += "</ul>";
+    if (stepsSelect.value !== '') {
+        // Zeige Toggle und Kalender-Modus als Standard
+        document.getElementById('dateSelectionToggle').classList.remove('hidden');
+        document.getElementById('calendarMode').classList.remove('hidden');
 
-  result.innerHTML = html;
+        // Aktiviere Kalender-Button als Standard
+        document.getElementById('btnCalendar').classList.add('active');
+        document.getElementById('btnWheel').classList.remove('active');
+
+        // Setze heutiges Datum als Standard
+        const today = new Date();
+        document.getElementById('startDate').valueAsDate = today;
+
+        // Automatisch Zeitplan erstellen
+        generateSchedule();
+    } else {
+        // Verstecke alles
+        document.getElementById('dateSelectionToggle').classList.add('hidden');
+        document.getElementById('calendarMode').classList.add('hidden');
+        document.getElementById('wheelMode').classList.add('hidden');
+    }
 }
 
-function calculateFromInput(){
-  calculate(new Date(input.value));
+
+    function switchDateMode(mode) {
+        const calendarMode = document.getElementById('calendarMode');
+        const wheelMode = document.getElementById('wheelMode');
+        const btnCalendar = document.getElementById('btnCalendar');
+        const btnWheel = document.getElementById('btnWheel');
+
+        if (mode === 'calendar') {
+            calendarMode.classList.remove('hidden');
+            wheelMode.classList.add('hidden');
+            btnCalendar.classList.add('active');
+            btnWheel.classList.remove('active');
+        } else {
+            calendarMode.classList.add('hidden');
+            wheelMode.classList.remove('hidden');
+            btnCalendar.classList.remove('active');
+            btnWheel.classList.add('active');
+
+            // Drehscheibe aktualisieren
+            drawWheel();
+            updateWheelCalculation();
+        }
+    }
+
+    function generateSchedule() {
+        const state = getFormState();
+
+        // Hole Datum entweder vom Kalender oder von der Drehscheibe
+        let selectedDate;
+        if (document.getElementById('calendarMode').classList.contains('hidden')) {
+            // Drehscheiben-Modus
+            selectedDate = getWheelDate();
+        } else {
+            // Kalender-Modus
+            if (!state.startDate) return alert('Bitte wählen Sie ein Datum aus.');
+            selectedDate = new Date(state.startDate);
+        }
+
+        year = selectedDate.getFullYear();
+
+        title = `${state.prefix ? state.prefix + '_' : ''}${state.scheduleType}-Zeitplan ${year}`;
+        document.getElementById('zeitplanTitle').textContent = title;
+
+        downloadFileName = `${year}_${state.prefix ? state.prefix + '_' : ''}${state.scheduleType}-Zeitplan`;
+
+        scheduleData = createScheduleData(state.scheduleType, selectedDate, state.steps);
+
+        const scheduleList = document.getElementById('scheduleList');
+        scheduleList.innerHTML = '';
+
+        scheduleData.forEach(({ formattedDate, task }, index) => {
+            const listItem = document.createElement('li');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = true;
+            checkbox.className = 'checkbox';
+
+            listItem.appendChild(checkbox);
+            listItem.appendChild(document.createTextNode(formattedDate + task));
+
+            scheduleList.appendChild(listItem);
+        });
+
+        document.getElementById('zeitplan').style.display = 'block';
+    }
+
+    function createScheduleData(scheduleType, startDate, selectedStep) {
+    const baseDate = new Date(startDate);
+    baseDate.setDate(baseDate.getDate() - selectedStep);
+
+    const weekdays = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+    return schedules[scheduleType].map(item => {
+        const taskDate = new Date(baseDate);
+        taskDate.setDate(taskDate.getDate() + item.offset);
+
+        const dayName = weekdays[taskDate.getDay()];
+
+        return {
+            taskDate,
+            task: item.task,
+            additionalText: item.additionalText,
+            formattedDate: taskDate.toLocaleDateString('de-DE') + " (" + dayName + "): "
+        };
+    });
 }
 
-/* Drehscheibe */
-const canvas = document.getElementById("wheelCanvas");
-const ctx = canvas.getContext("2d");
 
-const center = 150;
-const radius = 140;
+    function downloadICS() {
+        const state = getFormState();
 
-let rotation = (today.getDate() + today.getMonth()*30) * (360/365);
-let dragging = false;
-let lastAngle = 0;
+        console.log("scheduleType RAW:", JSON.stringify(state.scheduleType));
+        console.log("emoji keys:", Object.keys(emojiMap));
 
-const anglePerDay = 360/365;
+        if (!scheduleData.length) {
+            alert("Kein Zeitplan vorhanden.");
+            return;
+        }
 
-function draw(){
-  ctx.clearRect(0,0,300,300);
+        const checkboxes = document.querySelectorAll("#scheduleList input[type='checkbox']");
+        const emoji = emojiMap[state.scheduleType?.trim()] || "";
 
-  for(let i=0;i<12;i++){
-    let angle = (i*30 + rotation)*Math.PI/180;
-    ctx.beginPath();
-    ctx.moveTo(center,center);
-    ctx.arc(center,center,radius,angle,angle+30*Math.PI/180);
-    ctx.fillStyle = i%2 ? "#ffd27f" : "#fff2cc";
-    ctx.fill();
-  }
-}
+        let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Kalender Generator Bienen//DE
+`;
 
-function getDate(){
-  let day = Math.round(((rotation%360+360)%360)/anglePerDay);
-  let d = new Date(new Date().getFullYear(),0);
-  d.setDate(day+1);
-  return d;
-}
+        scheduleData.forEach((data, index) => {
 
-function update(){
-  calculate(getDate());
-}
+            const checkbox = checkboxes[index];
 
-function getAngle(x,y){
-  return Math.atan2(y-center,x-center)*180/Math.PI;
-}
+            if (!checkbox || !checkbox.checked) return;
 
-canvas.addEventListener("mousedown",start);
-canvas.addEventListener("touchstart",start);
+            const date = data.taskDate.toISOString().split('T')[0].replace(/-/g, '');
 
-function start(e){
-  dragging=true;
-  lastAngle = getAngle(...getPos(e));
-}
+            const now = new Date();
+            const dtstamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 
-window.addEventListener("mousemove",move);
-window.addEventListener("touchmove",move);
+            const uid = `${date}-${index}@bienenkalender`;
 
-function move(e){
-  if(!dragging) return;
+            const description = (data.additionalText || "").replace(/\n/g, " ");
 
-  let angle = getAngle(...getPos(e));
-  let diff = (angle - lastAngle) * 0.4; // weniger sensitiv
+            icsContent += `BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${dtstamp}
+DTSTART;VALUE=DATE:${date}
+SUMMARY:${emoji} ${title} - ${data.task}
+DESCRIPTION:${description}
+END:VEVENT
+`;
+        });
 
-  rotation += diff;
+        icsContent += `END:VCALENDAR`;
 
-  rotation = Math.round(rotation/anglePerDay)*anglePerDay;
+        const blob = new Blob([icsContent], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
 
-  lastAngle = angle;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = downloadFileName + '.ics';
+        a.click();
 
-  draw();
-  update();
-}
+        URL.revokeObjectURL(url);
+    }
 
-window.addEventListener("mouseup",()=>dragging=false);
-window.addEventListener("touchend",()=>dragging=false);
+    function downloadPDF() {
+        let xText = 20;
+        let y = xText * 2;
+        let xTask = 35;
+        const pageWidth = 210;
+        const maxWidth = pageWidth - xText * 2 - xTask;
 
-function getPos(e){
-  const rect = canvas.getBoundingClientRect();
-  if(e.touches){
-    return [
-      e.touches[0].clientX - rect.left,
-      e.touches[0].clientY - rect.top
-    ];
-  }
-  return [
-    e.clientX - rect.left,
-    e.clientY - rect.top
-  ];
-}
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
 
-/* Init */
-draw();
-calculate(today);
+        const prefix = document.getElementById('prefix').value.trim();
+        const scheduleType = document.getElementById('scheduleType').value;
+        const title = `${prefix} - ${scheduleType}-Zeitplan ${year}`;
+
+        doc.setFontSize(20);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, xText, 20);
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "normal");
+
+        const checkboxes = document.querySelectorAll("#scheduleList input[type='checkbox']");
+
+        scheduleData.forEach(({ taskDate, task, additionalText, formattedDate }, index) => {
+
+            const checkbox = checkboxes[index];
+
+            if (!checkbox || !checkbox.checked) return;
+
+            doc.setFont("helvetica", "bold");
+            doc.text(formattedDate, xText, y);
+            doc.text(task, xText + xTask, y);
+
+            if (additionalText) {
+                doc.setFont("helvetica", "normal");
+                const lines = doc.splitTextToSize(additionalText, maxWidth);
+                doc.text(lines, xText + xTask, y + 5);
+                y += lines.length * 7;
+            }
+
+            y += (xText / 1.2);
+
+            if (y > 280) {
+                doc.addPage();
+                y = 20;
+            }
+        });
+
+        doc.setFont("helvetica", "normal");
+        const creationDate = `Erstellt am: ${new Date().toLocaleDateString('de-DE')} - Version: ${Version}`;
+        doc.text(creationDate, xText, y);
+
+        doc.save(`${downloadFileName}.pdf`);
+    }
+
+    /* ===== DREHSCHEIBE (NEU & STABIL) ===== */
+
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const center = 150;
+    const radius = 140;
+
+    let angle = 0; // einzige Wahrheit
+    let dragging = false;
+    let lastAngle = 0;
+
+    const DEG_PER_DAY = 6; // 1 Tag = 6°
+
+    let baseDate = new Date();
+
+    function initWheel() {
+        // Event Listener für Drehscheibe
+        canvas.addEventListener("mousedown", startDrag);
+        canvas.addEventListener("touchstart", startDrag);
+
+        window.addEventListener("mousemove", moveDrag);
+        window.addEventListener("touchmove", moveDrag);
+
+        window.addEventListener("mouseup", endDrag);
+        window.addEventListener("touchend", endDrag);
+
+        drawWheel();
+        updateWheelCalculation();
+    }
+
+    /* Zeichnen */
+    function drawWheel() {
+        ctx.clearRect(0, 0, 300, 300);
+
+        const gradient = ctx.createConicGradient(angle * Math.PI / 180, center, center);
+        for (let i = 0; i <= 360; i += 10) {
+            gradient.addColorStop(i / 360, `hsl(${i},80%,60%)`);
+        }
+
+        ctx.beginPath();
+        ctx.arc(center, center, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Segmentlinien
+        for (let i = 0; i < 12; i++) {
+            let a = (i * 30 + angle) * Math.PI / 180;
+
+            ctx.beginPath();
+            ctx.moveTo(center, center);
+            ctx.arc(center, center, radius, a, a + 30 * Math.PI / 180);
+            ctx.strokeStyle = "rgba(0,0,0,0.2)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        // Marker oben (weiß)
+        ctx.beginPath();
+        ctx.arc(center, 20, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = "white";
+        ctx.fill();
+        ctx.strokeStyle = "#333";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+
+    /* Datum berechnen */
+    function getWheelDate() {
+        let days = Math.round(angle / DEG_PER_DAY);
+        let d = new Date(baseDate);
+        d.setDate(d.getDate() + days);
+        return d;
+    }
+
+    function updateWheelCalculation() {
+        const date = getWheelDate();
+        const weekdays = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+        const format = d => d.toLocaleDateString("de-DE") + " (" + weekdays[d.getDay()] + ")";
+
+        document.getElementById('wheelDateDisplay').innerHTML = "<b>Ausgewähltes Datum:</b> " + format(date);
+    }
+
+    /* Winkel berechnen */
+    function getMouseAngle(x, y) {
+        return Math.atan2(y - center, x - center) * 180 / Math.PI;
+    }
+
+    /* Start Drag */
+    function startDrag(e) {
+        dragging = true;
+        lastAngle = getMouseAngle(...getPos(e));
+    }
+
+    /* Bewegung */
+    function moveDrag(e) {
+        if (!dragging) return;
+
+        let current = getMouseAngle(...getPos(e));
+        let diff = current - lastAngle;
+
+        // 🔥 verhindert Springen bei 180° Übergang
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+
+        angle += diff;
+
+        lastAngle = current;
+
+        drawWheel();
+        updateWheelCalculation();
+        // Automatisch Zeitplan neu erstellen beim Drehen
+        generateSchedule();
+    }
+
+    /* Ende Drag */
+    function endDrag() {
+        dragging = false;
+        // Automatisch Zeitplan neu erstellen nach dem Drehen
+        if (dragging === false && !document.getElementById('wheelMode').classList.contains('hidden')) {
+            generateSchedule();
+        }
+    }
+
+    /* Buttons +/- Tag */
+    function adjustDay(n) {
+        angle += n * DEG_PER_DAY;
+        drawWheel();
+        updateWheelCalculation();
+
+        // Automatisch Zeitplan neu erstellen
+        generateSchedule();
+    }
+
+    /* Position ermitteln */
+    function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+
+        if (e.touches) {
+            return [
+                e.touches[0].clientX - rect.left,
+                e.touches[0].clientY - rect.top
+            ];
+        }
+
+        return [
+            e.clientX - rect.left,
+            e.clientY - rect.top
+        ];
+    }
 </script>
-
 </body>
 </html>
