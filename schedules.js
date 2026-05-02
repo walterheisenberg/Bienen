@@ -1,5 +1,5 @@
 // Emojis für den ICS-Kalnder
-const emojiMap = {
+window.emojiMap = {
     Zucht: "🐝👑",
     TuB: "🐝🔀",
     Kö_24Tg_sperren_OS: "🐝🚧",

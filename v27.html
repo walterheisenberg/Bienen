@@ -1,0 +1,308 @@
+<!-- Der Code ist unter CC-BY-NC-SA (cc-by-nc-sa-3.0-de) veröffentlicht
+https://creativecommons.org/licenses/by-nc-sa/3.0/de/legalcode
+
+Er wurde zum Teil von ChatGPT und Perplexity.ai erstellt. Die Prompts und Änderungen stammen von
+Ralf Lindlein
+lindlein@gmx.com
+
+Feedback ist immer willkomen. -->
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+
+    <script>
+        // Version
+        const Version = "0.27";
+    </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalender Generator Bienen</title>
+
+    <!-- Zeitpläne laden -->
+    <script src="schedules.js"></script>
+
+    <!-- 🔥 FIX: sicherstellen, dass emojiMap global verfügbar ist -->
+    <script>
+        if (typeof emojiMap !== "undefined") {
+            window.emojiMap = emojiMap;
+        }
+    </script>
+
+    <!-- CSS laden -->
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+    <h1 class="header">
+        <span>Kalender Generator Bienen</span>
+        <span class="version-group">
+            <span class="version" id="versionTag"></span>
+            <button class="impressum-btn" onclick="window.location.href='info.html'">
+                Info
+            </button>
+        </span>
+    </h1>
+
+    <form id="generalForm">
+        <label for="prefix">Benennung des Zeitplans:</label>
+        <input type="text" id="prefix" placeholder="z.B. SBA1, Serie_23 o.ä.">
+
+        <label for="scheduleType">Wählen Sie einen Zeitplan:</label>
+        <select id="scheduleType" onchange="populateSteps()">
+            <option value="">Bitte wählen</option>
+        </select>
+
+        <label for="steps">Wählen Sie einen Arbeitsschritt:</label>
+        <select id="steps" disabled>
+            <option value="">Bitte zuerst einen Typ wählen</option>
+        </select>
+
+        <label for="startDate">Wählen Sie das Datum für den Arbeitsschritt:</label>
+        <input type="date" id="startDate" required>
+        <button type="button" onclick="generateSchedule()">Zeitplan erstellen</button>
+    </form>
+
+    <div id="zeitplan" class="zeitplan" style="display:none;">
+        <h2 id="zeitplanTitle"></h2>
+        <ul id="scheduleList"></ul>
+        <button type="button" onclick="downloadICS()">Als ICS herunterladen</button>
+        <button type="button" onclick="downloadPDF()">Als PDF herunterladen</button>
+    </div>
+
+<script>
+    let year;
+    let downloadFileName;
+    let title = '';
+    let scheduleData = [];
+
+    const testTheHtml = false;
+
+    function setTestValues() {
+        if (testTheHtml) {
+            document.getElementById('prefix').value = 'TestPrefix';
+            document.getElementById('scheduleType').value = 'TuB';
+            populateSteps();
+            document.getElementById('steps').value = '0';
+            document.getElementById('startDate').value = '2025-06-01';
+        }
+    }
+
+    function getFormState() {
+        return {
+            prefix: document.getElementById('prefix').value.trim(),
+            scheduleType: document.getElementById('scheduleType').value,
+            steps: parseInt(document.getElementById('steps').value),
+            startDate: document.getElementById('startDate').value,
+        };
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('versionTag').textContent = "v" + Version;
+        populateScheduleTypes();
+        setTestValues();
+    });
+
+    function populateScheduleTypes() {
+        const scheduleTypeSelect = document.getElementById('scheduleType');
+        Object.keys(schedules).forEach(type => {
+            const option = document.createElement('option');
+            option.value = type;
+            option.textContent = type;
+            scheduleTypeSelect.appendChild(option);
+        });
+    }
+
+    function populateSteps() {
+        const scheduleType = document.getElementById('scheduleType').value;
+        const stepsSelect = document.getElementById('steps');
+
+        stepsSelect.innerHTML = '';
+        stepsSelect.disabled = !scheduleType;
+
+        if (!scheduleType) {
+            stepsSelect.innerHTML = '<option value="">Bitte zuerst einen Typ wählen</option>';
+            return;
+        }
+
+        schedules[scheduleType]
+            .filter(({ selectable }) => selectable)
+            .forEach(({ offset, task }) => {
+                const option = document.createElement('option');
+                option.value = offset;
+                option.textContent = task;
+                stepsSelect.appendChild(option);
+            });
+    }
+
+    function generateSchedule() {
+        const state = getFormState();
+        if (!state.startDate) return alert('Bitte wählen Sie ein Datum aus.');
+
+        const startDate = new Date(state.startDate);
+        year = startDate.getFullYear();
+
+        title = `${state.prefix ? state.prefix + '_' : ''}${state.scheduleType}-Zeitplan ${year}`;
+        document.getElementById('zeitplanTitle').textContent = title;
+
+        downloadFileName = `${year}_${state.prefix ? state.prefix + '_' : ''}${state.scheduleType}-Zeitplan`;
+
+        scheduleData = createScheduleData(state.scheduleType, startDate, state.steps);
+
+        const scheduleList = document.getElementById('scheduleList');
+        scheduleList.innerHTML = '';
+
+        scheduleData.forEach(({ formattedDate, task }, index) => {
+            const listItem = document.createElement('li');
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = true;
+            checkbox.className = 'checkbox';
+
+            listItem.appendChild(checkbox);
+            listItem.appendChild(document.createTextNode(formattedDate + task));
+
+            scheduleList.appendChild(listItem);
+        });
+
+        document.getElementById('zeitplan').style.display = 'block';
+    }
+
+    function createScheduleData(scheduleType, startDate, selectedStep) {
+        const baseDate = new Date(startDate);
+        baseDate.setDate(baseDate.getDate() - selectedStep);
+
+        return schedules[scheduleType].map(item => {
+            const taskDate = new Date(baseDate);
+            taskDate.setDate(taskDate.getDate() + item.offset);
+
+            return {
+                taskDate,
+                task: item.task,
+                additionalText: item.additionalText,
+                formattedDate: taskDate.toLocaleDateString('de-DE') + ": "
+            };
+        });
+    }
+
+    function downloadICS() {
+
+
+
+        const state = getFormState();
+
+        console.log("scheduleType RAW:", JSON.stringify(state.scheduleType));
+console.log("emoji keys:", Object.keys(emojiMap));
+
+        if (!scheduleData.length) {
+            alert("Kein Zeitplan vorhanden.");
+            return;
+        }
+
+        const checkboxes = document.querySelectorAll("#scheduleList input[type='checkbox']");
+        const emoji = emojiMap[state.scheduleType?.trim()] || "";
+
+        let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Kalender Generator Bienen//DE
+`;
+
+        scheduleData.forEach((data, index) => {
+
+            const checkbox = checkboxes[index];
+
+            if (!checkbox || !checkbox.checked) return;
+
+            const date = data.taskDate.toISOString().split('T')[0].replace(/-/g, '');
+
+            const now = new Date();
+            const dtstamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+            const uid = `${date}-${index}@bienenkalender`;
+
+            const description = (data.additionalText || "").replace(/\n/g, " ");
+
+            icsContent += `BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${dtstamp}
+DTSTART;VALUE=DATE:${date}
+SUMMARY:${emoji} ${title} - ${data.task}
+DESCRIPTION:${description}
+END:VEVENT
+`;
+        });
+
+        icsContent += `END:VCALENDAR`;
+
+        const blob = new Blob([icsContent], { type: 'text/calendar' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = downloadFileName + '.ics';
+        a.click();
+
+        URL.revokeObjectURL(url);
+    }
+
+    function downloadPDF() {
+        let xText = 20;
+        let y = xText * 2;
+        let xTask = 35;
+        const pageWidth = 210;
+        const maxWidth = pageWidth - xText * 2 - xTask;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+
+        const prefix = document.getElementById('prefix').value.trim();
+        const scheduleType = document.getElementById('scheduleType').value;
+        const title = `${prefix} - ${scheduleType}-Zeitplan ${year}`;
+
+        doc.setFontSize(20);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, xText, 20);
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "normal");
+
+        const checkboxes = document.querySelectorAll("#scheduleList input[type='checkbox']");
+
+        scheduleData.forEach(({ taskDate, task, additionalText, formattedDate }, index) => {
+
+            const checkbox = checkboxes[index];
+
+            if (!checkbox || !checkbox.checked) return;
+
+            doc.setFont("helvetica", "bold");
+            doc.text(formattedDate, xText, y);
+            doc.text(task, xText + xTask, y);
+
+            if (additionalText) {
+                doc.setFont("helvetica", "normal");
+                const lines = doc.splitTextToSize(additionalText, maxWidth);
+                doc.text(lines, xText + xTask, y + 5);
+                y += lines.length * 7;
+            }
+
+            y += (xText / 1.2);
+
+            if (y > 280) {
+                doc.addPage();
+                y = 20;
+            }
+        });
+
+        doc.setFont("helvetica", "normal");
+        const creationDate = `Erstellt am: ${new Date().toLocaleDateString('de-DE')} - Version: ${Version}`;
+        doc.text(creationDate, xText, y);
+
+        doc.save(`${downloadFileName}.pdf`);
+    }
+</script>
+</body>
+</html>
