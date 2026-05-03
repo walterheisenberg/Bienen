@@ -13,7 +13,7 @@ Feedback ist immer willkomen. -->
 
     <script>
         // Version
-        const Version = "0.35";
+        const Version = "0.32";
     </script>
 
     <meta charset="UTF-8">
@@ -34,112 +34,6 @@ Feedback ist immer willkomen. -->
     <link rel="stylesheet" href="style.css">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-
-    <style>
-        /* Zusätzliche Styles für Drehscheibe */
-        .toggle {
-            display: flex;
-            margin-bottom: 20px;
-            gap: 10px;
-        }
-        .toggle button {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            background: #ddd;
-            cursor: pointer;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        .toggle .active {
-            background: #f0a500;
-            color: white;
-        }
-
-        .wheel-container {
-            position: relative;
-            width: 300px;
-            height: 300px;
-            margin: 20px auto;
-        }
-
-        .pointer {
-            position: absolute;
-            top: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            border-left: 12px solid transparent;
-            border-right: 12px solid transparent;
-            border-bottom: 20px solid red;
-            z-index: 10;
-        }
-
-        canvas {
-            touch-action: none;
-            cursor: grab;
-        }
-
-        canvas:active {
-            cursor: grabbing;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        #wheelDateDisplay {
-            margin-top: 15px;
-            font-weight: bold;
-            font-size: 16px;
-        }
-
-        .wheel-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            justify-content: center;
-        }
-
-        .wheel-buttons button {
-            padding: 10px 20px;
-            background: #f0a500;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .wheel-buttons button:hover {
-            background: #d89400;
-        }
-
-        #wheelResult {
-            text-align: left;
-            margin-top: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-
-        #wheelResult ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        #wheelResult li {
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        #wheelResult li:last-child {
-            border-bottom: none;
-        }
-
-        .date-selection-container {
-            margin-top: 20px;
-        }
-    </style>
 </head>
 
 <body>
@@ -182,12 +76,11 @@ Feedback ist immer willkomen. -->
             <input type="date" id="startDate" onchange="generateSchedule()">
         </div>
 
-
         <!-- Drehscheiben Modus -->
         <div id="wheelMode" class="hidden">
             <div class="wheel-container">
                 <div class="pointer"></div>
-                <canvas id="wheelCanvas" width="300" height="300"></canvas>
+                <canvas id="wheelCanvas" width="200" height="200"></canvas>
             </div>
 
             <div id="wheelDateDisplay"></div>
@@ -197,12 +90,19 @@ Feedback ist immer willkomen. -->
                 <button type="button" onclick="adjustDay(1)">➡️ +1 Tag</button>
             </div>
         </div>
-
-<!--         <button type="button" id="generateBtn" class="hidden" onclick="generateSchedule()">Zeitplan erstellen</button> -->
     </form>
 
-    <div id="zeitplan" class="zeitplan" style="display:none;">
+    <!-- Vorschau-Sektion (ohne Checkboxen) -->
+    <div id="previewSection" class="zeitplan" style="display:none;">
         <h2 id="zeitplanTitle"></h2>
+        <ul id="previewList"></ul>
+        <button type="button" onclick="goToFinalPage()">Weiter ➡️</button>
+    </div>
+
+    <!-- Finaler Zeitplan (mit Checkboxen) -->
+    <div id="zeitplan" class="zeitplan" style="display:none;">
+        <button type="button" onclick="goBackToPreview()" style="margin-bottom: 15px;">⬅️ Zurück</button>
+        <h2 id="zeitplanTitle2"></h2>
         <ul id="scheduleList"></ul>
         <button type="button" onclick="downloadICS()">Als ICS herunterladen</button>
         <button type="button" onclick="downloadPDF()">Als PDF herunterladen</button>
@@ -217,18 +117,17 @@ Feedback ist immer willkomen. -->
     const testTheHtml = false;
 
     function setTestValues() {
-    if (testTheHtml) {
-        document.getElementById('prefix').value = 'TestPrefix';
-        document.getElementById('scheduleType').value = 'TuB';
-        populateSteps();
-        document.getElementById('steps').value = '0';
-        document.getElementById('startDate').value = '2025-06-01';
+        if (testTheHtml) {
+            document.getElementById('prefix').value = 'TestPrefix';
+            document.getElementById('scheduleType').value = 'TuB';
+            populateSteps();
+            document.getElementById('steps').value = '0';
+            document.getElementById('startDate').value = '2025-06-01';
 
-        // Trigger die Anzeige der Datumsauswahl
-        onStepSelected();
+            // Trigger die Anzeige der Datumsauswahl
+            onStepSelected();
+        }
     }
-}
-
 
     function getFormState() {
         return {
@@ -240,17 +139,20 @@ Feedback ist immer willkomen. -->
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('versionTag').textContent = "v" + Version;
-    populateScheduleTypes();
-    setTestValues();
+        document.getElementById('versionTag').textContent = "v" + Version;
+        populateScheduleTypes();
 
-    // Drehscheibe initialisieren
-    initWheel();
+        // Drehscheibe initialisieren
+        initWheel();
 
-    // Event-Listener für Datumsänderung (falls nicht inline)
-    // document.getElementById('startDate').addEventListener('change', generateSchedule);
-});
+        // Versuche gespeicherten Zustand wiederherzustellen
+        restoreFormState();
 
+        // Falls kein gespeicherter Zustand, setze Testwerte
+        if (!sessionStorage.getItem('formState')) {
+            setTestValues();
+        }
+    });
 
     function populateScheduleTypes() {
         const scheduleTypeSelect = document.getElementById('scheduleType');
@@ -263,64 +165,71 @@ Feedback ist immer willkomen. -->
     }
 
     function populateSteps() {
-    const scheduleType = document.getElementById('scheduleType').value;
-    const stepsSelect = document.getElementById('steps');
+        const scheduleType = document.getElementById('scheduleType').value;
+        const stepsSelect = document.getElementById('steps');
 
-    stepsSelect.innerHTML = '';
-    stepsSelect.disabled = !scheduleType;
+        stepsSelect.innerHTML = '';
+        stepsSelect.disabled = !scheduleType;
 
-    if (!scheduleType) {
-        stepsSelect.innerHTML = '<option value="">Bitte zuerst einen Typ wählen</option>';
-        // Verstecke Datumsauswahl
-        document.getElementById('dateSelectionToggle').classList.add('hidden');
-        document.getElementById('calendarMode').classList.add('hidden');
-        document.getElementById('wheelMode').classList.add('hidden');
-        return;
+        if (!scheduleType) {
+            stepsSelect.innerHTML = '<option value="">Bitte zuerst einen Typ wählen</option>';
+            // Verstecke Datumsauswahl
+            document.getElementById('dateSelectionToggle').classList.add('hidden');
+            document.getElementById('calendarMode').classList.add('hidden');
+            document.getElementById('wheelMode').classList.add('hidden');
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('zeitplan').style.display = 'none';
+            return;
+        }
+
+        schedules[scheduleType]
+            .filter(({ selectable }) => selectable)
+            .forEach(({ offset, task }) => {
+                const option = document.createElement('option');
+                option.value = offset;
+                option.textContent = task;
+                stepsSelect.appendChild(option);
+            });
+
+        // Nur automatisch auswählen, wenn kein gespeicherter Zustand vorhanden ist
+        if (!sessionStorage.getItem('formState') && stepsSelect.options.length > 0) {
+            stepsSelect.selectedIndex = 0;
+            onStepSelected();
+        } else if (sessionStorage.getItem('formState') && stepsSelect.value !== '') {
+            // Bei Wiederherstellung auch onStepSelected aufrufen
+            onStepSelected();
+        }
     }
-
-    schedules[scheduleType]
-        .filter(({ selectable }) => selectable)
-        .forEach(({ offset, task }) => {
-            const option = document.createElement('option');
-            option.value = offset;
-            option.textContent = task;
-            stepsSelect.appendChild(option);
-        });
-
-    // Automatisch den ersten Schritt auswählen und Datumsauswahl anzeigen
-    if (stepsSelect.options.length > 0) {
-        stepsSelect.selectedIndex = 0;
-        onStepSelected();
-    }
-}
-
 
     function onStepSelected() {
-    const stepsSelect = document.getElementById('steps');
+        const stepsSelect = document.getElementById('steps');
 
-    if (stepsSelect.value !== '') {
-        // Zeige Toggle und Kalender-Modus als Standard
-        document.getElementById('dateSelectionToggle').classList.remove('hidden');
-        document.getElementById('calendarMode').classList.remove('hidden');
+        if (stepsSelect.value !== '') {
+            // Zeige Toggle und Kalender-Modus als Standard
+            document.getElementById('dateSelectionToggle').classList.remove('hidden');
+            document.getElementById('calendarMode').classList.remove('hidden');
 
-        // Aktiviere Kalender-Button als Standard
-        document.getElementById('btnCalendar').classList.add('active');
-        document.getElementById('btnWheel').classList.remove('active');
+            // Aktiviere Kalender-Button als Standard
+            document.getElementById('btnCalendar').classList.add('active');
+            document.getElementById('btnWheel').classList.remove('active');
 
-        // Setze heutiges Datum als Standard
-        const today = new Date();
-        document.getElementById('startDate').valueAsDate = today;
+            // Setze heutiges Datum als Standard (nur wenn noch kein Datum gesetzt ist)
+            if (!document.getElementById('startDate').value) {
+                const today = new Date();
+                document.getElementById('startDate').valueAsDate = today;
+            }
 
-        // Automatisch Zeitplan erstellen
-        generateSchedule();
-    } else {
-        // Verstecke alles
-        document.getElementById('dateSelectionToggle').classList.add('hidden');
-        document.getElementById('calendarMode').classList.add('hidden');
-        document.getElementById('wheelMode').classList.add('hidden');
+            // Automatisch Zeitplan erstellen
+            generateSchedule();
+        } else {
+            // Verstecke alles
+            document.getElementById('dateSelectionToggle').classList.add('hidden');
+            document.getElementById('calendarMode').classList.add('hidden');
+            document.getElementById('wheelMode').classList.add('hidden');
+            document.getElementById('previewSection').style.display = 'none';
+            document.getElementById('zeitplan').style.display = 'none';
+        }
     }
-}
-
 
     function switchDateMode(mode) {
         const calendarMode = document.getElementById('calendarMode');
@@ -333,6 +242,9 @@ Feedback ist immer willkomen. -->
             wheelMode.classList.add('hidden');
             btnCalendar.classList.add('active');
             btnWheel.classList.remove('active');
+
+            // Automatisch Zeitplan erstellen
+            generateSchedule();
         } else {
             calendarMode.classList.add('hidden');
             wheelMode.classList.remove('hidden');
@@ -342,9 +254,11 @@ Feedback ist immer willkomen. -->
             // Drehscheibe aktualisieren
             drawWheel();
             updateWheelCalculation();
+
+            // Automatisch Zeitplan erstellen
+            generateSchedule();
         }
     }
-
     function generateSchedule() {
         const state = getFormState();
 
@@ -355,7 +269,7 @@ Feedback ist immer willkomen. -->
             selectedDate = getWheelDate();
         } else {
             // Kalender-Modus
-            if (!state.startDate) return alert('Bitte wählen Sie ein Datum aus.');
+            if (!state.startDate) return;
             selectedDate = new Date(state.startDate);
         }
 
@@ -368,10 +282,35 @@ Feedback ist immer willkomen. -->
 
         scheduleData = createScheduleData(state.scheduleType, selectedDate, state.steps);
 
+        // Zeige Vorschau-Liste (ohne Checkboxen)
+        displayPreviewList();
+    }
+
+    function displayPreviewList() {
+        const previewList = document.getElementById('previewList');
+        previewList.innerHTML = '';
+
+        scheduleData.forEach(({ dateOnly, task }) => {
+            const listItem = document.createElement('li');
+
+            const dateSpan = document.createElement('strong');
+            dateSpan.textContent = dateOnly + ": ";
+
+            listItem.appendChild(dateSpan);
+            listItem.appendChild(document.createTextNode(task));
+
+            previewList.appendChild(listItem);
+        });
+
+        document.getElementById('previewSection').style.display = 'block';
+        document.getElementById('zeitplan').style.display = 'none';
+    }
+
+    function showFinalSchedule() {
         const scheduleList = document.getElementById('scheduleList');
         scheduleList.innerHTML = '';
 
-        scheduleData.forEach(({ formattedDate, task }, index) => {
+        scheduleData.forEach(({ dateOnly, task }, index) => {
             const listItem = document.createElement('li');
 
             const checkbox = document.createElement('input');
@@ -379,37 +318,115 @@ Feedback ist immer willkomen. -->
             checkbox.checked = true;
             checkbox.className = 'checkbox';
 
+            const dateSpan = document.createElement('strong');
+            dateSpan.textContent = dateOnly + ": ";
+
             listItem.appendChild(checkbox);
-            listItem.appendChild(document.createTextNode(formattedDate + task));
+            listItem.appendChild(dateSpan);
+            listItem.appendChild(document.createTextNode(task));
 
             scheduleList.appendChild(listItem);
         });
 
+        // Titel auch in finaler Ansicht setzen
+        document.getElementById('zeitplanTitle2').textContent = document.getElementById('zeitplanTitle').textContent;
+
+        document.getElementById('previewSection').style.display = 'none';
         document.getElementById('zeitplan').style.display = 'block';
     }
 
-    function createScheduleData(scheduleType, startDate, selectedStep) {
-    const baseDate = new Date(startDate);
-    baseDate.setDate(baseDate.getDate() - selectedStep);
+    function goToFinalPage() {
+        // Speichere den aktuellen Zustand
+        saveFormState();
 
-    const weekdays = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+        // Verstecke alles außer dem finalen Zeitplan
+        document.getElementById('generalForm').style.display = 'none';
+        document.getElementById('previewSection').style.display = 'none';
 
-    return schedules[scheduleType].map(item => {
-        const taskDate = new Date(baseDate);
-        taskDate.setDate(taskDate.getDate() + item.offset);
+        // Zeige finalen Zeitplan
+        showFinalSchedule();
 
-        const dayName = weekdays[taskDate.getDay()];
+        // Scrolle nach oben
+        window.scrollTo(0, 0);
+    }
 
-        return {
-            taskDate,
-            task: item.task,
-            additionalText: item.additionalText,
-            formattedDate: taskDate.toLocaleDateString('de-DE') + " (" + dayName + "): "
+    function goBackToPreview() {
+        // Zeige das Formular wieder
+        document.getElementById('generalForm').style.display = 'block';
+        document.getElementById('previewSection').style.display = 'block';
+        document.getElementById('zeitplan').style.display = 'none';
+
+        // Scrolle nach oben
+        window.scrollTo(0, 0);
+    }
+
+    function saveFormState() {
+        const state = {
+            prefix: document.getElementById('prefix').value,
+            scheduleType: document.getElementById('scheduleType').value,
+            steps: document.getElementById('steps').value,
+            startDate: document.getElementById('startDate').value,
+            angle: angle,
+            isWheelMode: !document.getElementById('wheelMode').classList.contains('hidden')
         };
-    });
-}
 
+        sessionStorage.setItem('formState', JSON.stringify(state));
+    }
 
+    function restoreFormState() {
+        const savedState = sessionStorage.getItem('formState');
+        if (!savedState) return;
+
+        const state = JSON.parse(savedState);
+
+        document.getElementById('prefix').value = state.prefix || '';
+
+        if (state.scheduleType) {
+            document.getElementById('scheduleType').value = state.scheduleType;
+            populateSteps();
+        }
+
+        if (state.steps) {
+            document.getElementById('steps').value = state.steps;
+        }
+
+        if (state.startDate) {
+            document.getElementById('startDate').value = state.startDate;
+        }
+
+        if (state.angle !== undefined) {
+            angle = state.angle;
+            drawWheel();
+            updateWheelCalculation();
+        }
+
+        if (state.isWheelMode) {
+            switchDateMode('wheel');
+        }
+    }
+
+    function createScheduleData(scheduleType, startDate, selectedStep) {
+        const baseDate = new Date(startDate);
+        baseDate.setDate(baseDate.getDate() - selectedStep);
+
+        const weekdays = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+
+        return schedules[scheduleType].map(item => {
+            const taskDate = new Date(baseDate);
+            taskDate.setDate(taskDate.getDate() + item.offset);
+
+            const dayName = weekdays[taskDate.getDay()];
+            const dateStr = taskDate.toLocaleDateString('de-DE') + " (" + dayName + ")";
+
+            return {
+                taskDate,
+                task: item.task,
+                additionalText: item.additionalText,
+                formattedDate: dateStr + ": ",
+                dateOnly: dateStr
+            };
+        });
+    }
     function downloadICS() {
         const state = getFormState();
 
@@ -479,25 +496,25 @@ END:VEVENT
 
         const prefix = document.getElementById('prefix').value.trim();
         const scheduleType = document.getElementById('scheduleType').value;
-        const title = `${prefix} - ${scheduleType}-Zeitplan ${year}`;
+        const pdfTitle = `${prefix} - ${scheduleType}-Zeitplan ${year}`;
 
         doc.setFontSize(20);
         doc.setFont("helvetica", "bold");
-        doc.text(title, xText, 20);
+        doc.text(pdfTitle, xText, 20);
 
         doc.setFontSize(14);
         doc.setFont("helvetica", "normal");
 
         const checkboxes = document.querySelectorAll("#scheduleList input[type='checkbox']");
 
-        scheduleData.forEach(({ taskDate, task, additionalText, formattedDate }, index) => {
+        scheduleData.forEach(({ taskDate, task, additionalText, dateOnly }, index) => {
 
             const checkbox = checkboxes[index];
 
             if (!checkbox || !checkbox.checked) return;
 
             doc.setFont("helvetica", "bold");
-            doc.text(formattedDate, xText, y);
+            doc.text(dateOnly + ":", xText, y);
             doc.text(task, xText + xTask, y);
 
             if (additionalText) {
@@ -521,14 +538,13 @@ END:VEVENT
 
         doc.save(`${downloadFileName}.pdf`);
     }
-
     /* ===== DREHSCHEIBE (NEU & STABIL) ===== */
 
     const canvas = document.getElementById("wheelCanvas");
     const ctx = canvas.getContext("2d");
 
-    const center = 150;
-    const radius = 140;
+    const center = 100;
+    const radius = 93;
 
     let angle = 0; // einzige Wahrheit
     let dragging = false;
@@ -555,7 +571,7 @@ END:VEVENT
 
     /* Zeichnen */
     function drawWheel() {
-        ctx.clearRect(0, 0, 300, 300);
+        ctx.clearRect(0, 0, 200, 200);
 
         const gradient = ctx.createConicGradient(angle * Math.PI / 180, center, center);
         for (let i = 0; i <= 360; i += 10) {
@@ -581,7 +597,7 @@ END:VEVENT
 
         // Marker oben (weiß)
         ctx.beginPath();
-        ctx.arc(center, 20, 6, 0, 2 * Math.PI);
+        ctx.arc(center, 13, 6, 0, 2 * Math.PI);
         ctx.fillStyle = "white";
         ctx.fill();
         ctx.strokeStyle = "#333";
@@ -633,6 +649,7 @@ END:VEVENT
 
         drawWheel();
         updateWheelCalculation();
+
         // Automatisch Zeitplan neu erstellen beim Drehen
         generateSchedule();
     }
@@ -640,10 +657,6 @@ END:VEVENT
     /* Ende Drag */
     function endDrag() {
         dragging = false;
-        // Automatisch Zeitplan neu erstellen nach dem Drehen
-        if (dragging === false && !document.getElementById('wheelMode').classList.contains('hidden')) {
-            generateSchedule();
-        }
     }
 
     /* Buttons +/- Tag */
