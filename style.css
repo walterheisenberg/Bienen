@@ -1,108 +1,68 @@
+/* ===== KALENDER GENERATOR BIENEN - STYLES v0.44 ===== */
+
+/* ===== CSS-VARIABLEN (Optimierung #22) ===== */
+:root {
+  /* Farben */
+  --primary-color: #007BFF;
+  --primary-hover: #0056b3;
+  --accent-color: #f0a500;
+  --accent-hover: #d89400;
+  --bg-light: #f5f5f5;
+  --bg-white: #ffffff;
+  --bg-item: #f0f0f0;
+  --text-dark: #333;
+  --text-light: #777;
+  --border-color: #ccc;
+  --error-color: #dc3545;
+  
+  /* Abstände */
+  --spacing-xs: 5px;
+  --spacing-sm: 10px;
+  --spacing-md: 15px;
+  --spacing-lg: 20px;
+  --spacing-xl: 25px;
+  
+  /* Größen */
+  --border-radius: 5px;
+  --border-radius-lg: 8px;
+  --max-width: 600px;
+  --font-size-base: 1.2rem;
+}
+
+/* ===== GLOBAL RESET (Optimierung #26) ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ===== BODY & LAYOUT ===== */
 body {
   font-family: Arial, sans-serif;
-  margin: 10px;
+  margin: var(--spacing-sm);
   padding: 0;
   line-height: 1.6;
-  background-color: #f5f5f5;
+  background-color: var(--bg-light);
   width: 97%;
-  font-size: 1.2rem;
+  font-size: var(--font-size-base);
 }
 
 h1 {
-  text-align: center;
+text-align: center;
   font-size: 1.5rem;
-}
-
-.version {
-  font-size: 0.6em;
-  color: #777;
-  margin-left: 8px;
-  font-weight: normal;
-}
-
-form, .zeitplan {
-  max-width: 600px;
-  width: 97%;
-  margin: 20px auto;
-  background: #ffffff;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  box-sizing: border-box;
-}
-
-ul {
-  list-style-type: none;
-  padding-left: 0;
-}
-
-li {
-  background-color: #f0f0f0;
-  margin-bottom: 10px;
-  padding: 10px;
-  border-radius: 5px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.checkbox {
-  width: 25px;
-  height: 25px;
-  margin-right: 20px;
-}
-
-label {
-  margin-top: 10px;
-  display: block;
-}
-
-input, select, button {
-  width: 100%;
-  margin: 5px 0;
-  padding: 10px;
-  font-size: 1.2rem;
-  border-radius: 5px;
-  border: 1px solid #ccc;
-  box-sizing: border-box;
-}
-
-button {
-  background-color: #007BFF;
-  color: white;
-  cursor: pointer;
-  border: none;
-}
-
-button:hover {
-  background-color: #0056b3;
-}
-
-.date-span {
-  margin-right: 5px;
-}
-
-.impressum-btn {
-  background: none;
-  color: #007BFF;
-  padding: 0;
-  font-size: 0.7em;
-  border: none;
-  cursor: pointer;
-}
-
-.impressum-btn:hover {
-  text-decoration: underline;
 }
 
 .header {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  gap: var(--spacing-sm);
   flex-wrap: nowrap;
+}
+
+.version {
+font-size: 0.6em;
+  color: var(--text-light);
+  margin-left: 8px;
+  font-weight: normal;
 }
 
 .version-group {
@@ -112,11 +72,113 @@ button:hover {
   white-space: nowrap;
 }
 
-/* Drehscheibe & Toggle Styles */
+/* ===== FORM & CONTAINER ===== */
+form, .zeitplan {
+  max-width: var(--max-width);
+  width: 97%;
+  margin: var(--spacing-lg) auto;
+  background: var(--bg-white);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== FORM ELEMENTS (Optimierung #24) ===== */
+label {
+  margin-top: var(--spacing-sm);
+  display: block;
+}
+
+input, 
+select, 
+button {
+  width: 100%;
+  margin: var(--spacing-xs) 0;
+  padding: var(--spacing-sm);
+  font-size: var(--font-size-base);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+}
+
+/* Button Styles */
+button {
+  background-color: var(--primary-color);
+  color: white;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  background-color: var(--primary-hover);
+}
+
+.impressum-btn {
+  background: none;
+  color: var(--primary-color);
+  padding: 0;
+  font-size: 0.7em;
+  border: none;
+  cursor: pointer;
+  width: auto;
+}
+
+.impressum-btn:hover {
+  text-decoration: underline;
+  background: none;
+}
+
+/* ===== LISTS ===== */
+ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+li {
+  background-color: var(--bg-item);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+li strong::after {
+  content: " ";
+  display: inline-block;  /* Damit Flex es nicht ignoriert */
+  width: 0.3em;
+}
+
+.checkbox {
+  width: var(--spacing-xl);
+  height: var(--spacing-xl);
+  margin-right: var(--spacing-lg);
+}
+
+/* Vorschau-Liste ohne Hintergrund (Optimierung #21 - zusammengeführt) */
+#previewList li {
+  background: none;
+  padding: var(--spacing-xs) 0;
+  margin-bottom: var(--spacing-xs);
+}
+
+/* Task-Einrückung bei Checkboxen */
+.task-indent {
+  margin-left: var(--spacing-xl);
+}
+
+/* ===== DREHSCHEIBE ===== */
+.date-selection-container {
+  margin-top: var(--spacing-lg);
+}
+
+/* Toggle Buttons */
 .toggle {
   display: flex;
-  margin-bottom: 20px;
-  gap: 10px;
+  margin-bottom: var(--spacing-lg);
+  gap: var(--spacing-sm);
 }
 
 .toggle button {
@@ -124,8 +186,9 @@ button:hover {
   padding: 12px;
   background: #ddd;
   cursor: pointer;
-  border-radius: 5px;
+  border-radius: var(--border-radius);
   font-size: 16px;
+  transition: background-color 0.2s ease;
 }
 
 .toggle button:hover {
@@ -133,19 +196,20 @@ button:hover {
 }
 
 .toggle .active {
-  background: #f0a500;
+  background: var(--accent-color);
   color: white;
 }
 
 .toggle .active:hover {
-  background: #d89400;
+  background: var(--accent-hover);
 }
 
+/* Wheel Container (Optimierung #21 - nur 1x definiert) */
 .wheel-container {
   position: relative;
-  width: 300px;
-  height: 300px;
-  margin: 20px auto;
+  width: 200px;
+  height: 200px;
+  margin: var(--spacing-lg) auto;
 }
 
 .pointer {
@@ -168,51 +232,36 @@ canvas:active {
   cursor: grabbing;
 }
 
-.hidden {
-  display: none !important;
-}
-
-#previewList li {
-  background: none;
-  padding: 5px 0;
-  margin-bottom: 5px;
-}
-
 #wheelDateDisplay {
-margin-top: 15px;
-font-weight: bold;
-font-size: 16px;
+  margin-top: var(--spacing-md);
+  font-weight: bold;
+  font-size: 16px;
 }
 
 .wheel-buttons {
   display: flex;
-  gap: 10px;
-  margin-top: 15px;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
   justify-content: center;
 }
 
 .wheel-buttons button {
-  padding: 10px 20px;
-  background: #f0a500;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--accent-color);
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--border-radius);
   cursor: pointer;
   font-size: 14px;
   width: auto;
-}
-
-.wheel-container {
-  position: relative;
-  width: 200px;
-  height: 200px;
-  margin: 20px auto;
+  transition: background-color 0.2s ease;
 }
 
 .wheel-buttons button:hover {
-  background: #d89400;
+  background: var(--accent-hover);
 }
 
-.date-selection-container {
-  margin-top: 20px;
+/* ===== UTILITY CLASSES ===== */
+.hidden {
+  display: none !important;
 }
