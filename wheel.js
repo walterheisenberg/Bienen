@@ -27,7 +27,7 @@ let baseDate = new Date();
 function initWheel() {
     canvas = document.getElementById("wheelCanvas");
     ctx = canvas?.getContext("2d");
-    
+
     if (!canvas || !ctx) return;
 
     // Canvas Event-Listener für Start des Dragging
@@ -47,8 +47,8 @@ function drawWheel() {
     ctx.clearRect(0, 0, WHEEL_CONFIG.size, WHEEL_CONFIG.size);
 
     const gradient = ctx.createConicGradient(
-        angle * Math.PI / 180, 
-        WHEEL_CONFIG.center, 
+        angle * Math.PI / 180,
+        WHEEL_CONFIG.center,
         WHEEL_CONFIG.center
     );
     for (let i = 0; i <= 360; i += 10) {
@@ -60,27 +60,13 @@ function drawWheel() {
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Segmentlinien
-    for (let i = 0; i < WHEEL_CONFIG.segmentCount; i++) {
-        let a = (i * WHEEL_CONFIG.segmentAngle + angle) * Math.PI / 180;
+    // Marker oben (dreht sich mit)
+    const markerAngle = (angle - 90) * Math.PI / 180;
+    const markerX = WHEEL_CONFIG.center + WHEEL_CONFIG.radius * Math.cos(markerAngle);
+    const markerY = WHEEL_CONFIG.center + WHEEL_CONFIG.radius * Math.sin(markerAngle);
 
-  ctx.beginPath();
-        ctx.moveTo(WHEEL_CONFIG.center, WHEEL_CONFIG.center);
-   ctx.arc(
-            WHEEL_CONFIG.center, 
-            WHEEL_CONFIG.center, 
-        WHEEL_CONFIG.radius, 
-        a, 
-   a + WHEEL_CONFIG.segmentAngle * Math.PI / 180
-        );
-    ctx.strokeStyle = "rgba(0,0,0,0.2)";
-      ctx.lineWidth = 2;
-     ctx.stroke();
-    }
-
-    // Marker oben (weiß)
     ctx.beginPath();
-    ctx.arc(WHEEL_CONFIG.center, WHEEL_CONFIG.markerY, WHEEL_CONFIG.markerRadius, 0, 2 * Math.PI);
+    ctx.arc(markerX, markerY, WHEEL_CONFIG.markerRadius, 0, 2 * Math.PI);
     ctx.fillStyle = "white";
     ctx.fill();
     ctx.strokeStyle = "#333";
@@ -104,10 +90,10 @@ function getWheelDate() {
  */
 function updateWheelCalculation() {
     const wheelDateDisplay = document.getElementById('wheelDateDisplay');
- if (!wheelDateDisplay) return;
+    if (!wheelDateDisplay) return;
 
     const date = getWheelDate();
-    wheelDateDisplay.innerHTML = `<b>Ausgewähltes Datum:</b> ${formatDateLong(date).slice(0, -1)}`;
+    wheelDateDisplay.innerHTML = `Ausgewähltes Datum: ${formatDateLong(date).slice(0, -1)}`;
 }
 
 /**
@@ -128,7 +114,7 @@ function startDrag(e) {
     e.preventDefault();
     dragging = true;
     lastAngle = getMouseAngle(...getPos(e));
-    
+
     // Event-Listener für Bewegung hinzufügen
     window.addEventListener("mousemove", moveDrag);
     window.addEventListener("touchmove", moveDrag, { passive: false });
@@ -144,7 +130,7 @@ function moveDrag(e) {
     if (!dragging) return;
 
     e.preventDefault();
- let current = getMouseAngle(...getPos(e));
+    let current = getMouseAngle(...getPos(e));
     let diff = current - lastAngle;
 
     if (diff > 180) diff -= 360;
@@ -163,7 +149,7 @@ function moveDrag(e) {
  */
 function endDrag() {
     dragging = false;
-    
+
     // Event-Listener entfernen
     window.removeEventListener("mousemove", moveDrag);
     window.removeEventListener("touchmove", moveDrag);
@@ -192,9 +178,9 @@ function getPos(e) {
 
     if (e.touches) {
         return [
-     e.touches[0].clientX - rect.left,
- e.touches[0].clientY - rect.top
-      ];
+            e.touches[0].clientX - rect.left,
+            e.touches[0].clientY - rect.top
+        ];
     }
 
     return [
